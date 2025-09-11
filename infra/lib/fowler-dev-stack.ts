@@ -12,26 +12,32 @@ export class FowlerDevStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const domainName = 'fowler.dev';
-    const bucketName = `${domainName}-hugo-site`;
+  const domainName = 'fowler.dev';
+  // Avoid dots in S3 bucket names used as CloudFront S3 origins over HTTPS
+  const sanitizedDomain = domainName.replace(/\./g, '-');
+  const accountId = cdk.Stack.of(this).account;
+  const bucketName = `${sanitizedDomain}-${accountId}-hugo-site`;
 
     // S3 bucket to host the Hugo site
     const siteBucket = new s3.Bucket(this, 'SiteBucket', {
       bucketName: bucketName,
-      websiteIndexDocument: 'index.html',
-      websiteErrorDocument: '404.html',
+      // No website configuration: use S3 REST endpoint with CloudFront OAC
       publicReadAccess: false,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
 
-    // Origin Access Identity for CloudFront to access S3
-    const originAccessIdentity = new cloudfront.OriginAccessIdentity(this, 'OAI', {
-      comment: `OAI for ${domainName}`,
+    // Origin Access Control (OAC) for CloudFront to access S3 (replaces legacy OAI)
+    const oac = new cloudfront.CfnOriginAccessControl(this, 'OAC', {
+      originAccessControlConfig: {
+        name: `${domainName}-oac`,
+        originAccessControlOriginType: 's3',
+        signingBehavior: 'always',
+        signingProtocol: 'sigv4',
+        description: `OAC for ${domainName}`,
+      },
     });
-
-    siteBucket.grantRead(originAccessIdentity);
 
     // Route53 hosted zone (assumes you already have this)
     const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
@@ -49,9 +55,7 @@ export class FowlerDevStack extends cdk.Stack {
     // CloudFront distribution
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultBehavior: {
-        origin: new origins.S3Origin(siteBucket, {
-          originAccessIdentity,
-        }),
+        origin: new origins.S3Origin(siteBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
       },
@@ -67,6 +71,25 @@ export class FowlerDevStack extends cdk.Stack {
         },
       ],
     });
+
+    // Attach the OAC to the S3 origin in the underlying CloudFront distribution
+  const cfnDistribution = distribution.node.defaultChild as cloudfront.CfnDistribution;
+  cfnDistribution.addPropertyOverride('DistributionConfig.Origins.0.OriginAccessControlId', oac.attrId);
+  // Ensure CloudFront treats the origin as an S3 origin with OAC (no OAI)
+  cfnDistribution.addPropertyOverride('DistributionConfig.Origins.0.S3OriginConfig.OriginAccessIdentity', '');
+  cfnDistribution.addPropertyDeletionOverride('DistributionConfig.Origins.0.CustomOriginConfig');
+
+    // Update S3 bucket policy to allow CloudFront (via OAC) to read objects
+    siteBucket.addToResourcePolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject'],
+      resources: [siteBucket.arnForObjects('*')],
+      principals: [new iam.ServicePrincipal('cloudfront.amazonaws.com')],
+      conditions: {
+        StringEquals: {
+          'AWS:SourceArn': `arn:aws:cloudfront::${this.account}:distribution/${distribution.distributionId}`,
+        },
+      },
+    }));
 
     // Route53 records
     new route53.ARecord(this, 'AliasRecord', {
