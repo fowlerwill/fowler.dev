@@ -1,4 +1,4 @@
-baseURL = 'https:/fowler.dev/'
+baseURL = 'https://fowler.dev/'
 languageCode = 'en-ca'
 title = 'Fowler (not that one) Blog'
 
