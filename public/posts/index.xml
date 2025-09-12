@@ -2,18 +2,25 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Posts on Fowler (not that one) Blog</title>
-    <link>http://localhost:1313/posts/</link>
+    <link>https://fowler.dev/posts/</link>
     <description>Recent content in Posts on Fowler (not that one) Blog</description>
     <generator>Hugo</generator>
     <language>en-ca</language>
     <lastBuildDate>Wed, 10 Sep 2025 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/posts/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://fowler.dev/posts/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Yet another Tech Blog</title>
-      <link>http://localhost:1313/posts/welcome/</link>
+      <link>https://fowler.dev/posts/welcome/</link>
       <pubDate>Wed, 10 Sep 2025 00:00:00 +0000</pubDate>
-      <guid>http://localhost:1313/posts/welcome/</guid>
+      <guid>https://fowler.dev/posts/welcome/</guid>
       <description>&lt;h1 id=&#34;i-really-just-want-to-get-this-working-first&#34;&gt;I really just want to get this working first&amp;hellip;&lt;/h1&gt;&#xA;&lt;p&gt;I know the theme is a little ugly, and that this post will be useless, but I just&#xA;want to get over the hump of getting the framework set up so that I can get onto&#xA;making posts that might be interesting or useful.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title></title>
+      <link>https://fowler.dev/posts/2025-10-11/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://fowler.dev/posts/2025-10-11/</guid>
+      <description></description>
     </item>
   </channel>
 </rss>
