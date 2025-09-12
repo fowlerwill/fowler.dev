@@ -52,17 +52,47 @@ export class FowlerDevStack extends cdk.Stack {
       subjectAlternativeNames: [`www.${domainName}`],
     });
 
+    // CloudFront Function: rewrite pretty URLs to /index.html under directories
+    const urlRewriteFn = new cloudfront.Function(this, 'UrlRewriteFn', {
+      code: cloudfront.FunctionCode.fromInline(
+        "function handler(event) {\n" +
+          "  var request = event.request;\n" +
+          "  var uri = request.uri;\n" +
+          "  if (uri && uri.length > 1) {\n" +
+          "    if (uri.charAt(uri.length - 1) === '/') {\n" +
+          "      request.uri = uri + 'index.html';\n" +
+          "    } else if (uri.indexOf('.') === -1) {\n" +
+          "      request.uri = uri + '/index.html';\n" +
+          "    }\n" +
+          "  }\n" +
+          "  return request;\n" +
+        "}"
+      ),
+    });
+
     // CloudFront distribution
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultBehavior: {
         origin: new origins.S3Origin(siteBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        functionAssociations: [
+          {
+            function: urlRewriteFn,
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+          },
+        ],
       },
       domainNames: [domainName, `www.${domainName}`],
       certificate: certificate,
       defaultRootObject: 'index.html',
       errorResponses: [
+        {
+          httpStatus: 403,
+          responseHttpStatus: 404,
+          responsePagePath: '/404.html',
+          ttl: cdk.Duration.minutes(30),
+        },
         {
           httpStatus: 404,
           responseHttpStatus: 404,
