@@ -1,6 +1,6 @@
 baseURL = 'https://fowler.dev/'
 languageCode = 'en-ca'
-title = "Fowler's (not that one) Dev Blog"
+title = "Will Fowler's desk is made of corners"
 
 theme = 'archie'
 
